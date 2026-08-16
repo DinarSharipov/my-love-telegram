@@ -12,7 +12,9 @@
 - Этап плана: **2 — account linking**.
 - Последний завершённый срез: **стартовый auth-визуал и реальный deep-link exchange**.
 - Следующий рекомендуемый срез: **CI и integration tests bot handlers**.
-- Главный внешний блокер: **delivery/outbox envelope для Telegram отсутствует**.
+- Главный внешний блокер: production secrets workflow (`TELEGRAM_BOT_TOKEN` и
+  `TELEGRAM_INTEGRATION_SECRET`) должны быть заданы в GitHub Actions; polling bot
+  уже подключается к Telegram и обращается к production backend.
 
 ## Что было в репозитории до начала реализации
 
@@ -98,6 +100,15 @@
 - [ ] Threat-model, privacy и load review.
 - [ ] Deploy/rollback/incident/secrets-rotation runbooks.
 - [ ] Staging end-to-end и production checklist.
+
+### Production smoke (2026-08-16)
+
+- [x] Отдельный bot-repository развёрнут на `185.227.144.160`.
+- [x] `BACKEND_BASE_URL` закреплён на production API
+      `https://api.147.45.124.221.sslip.io`.
+- [x] Контейнер стартует и проходит `bot_started` как `@my_LOVE_telegrem_bot`.
+- [ ] Проверить реальную привязку и доставку уведомления конкретным Telegram
+      пользователем после ввода одноразового кода.
 
 ## Реализованная структура
 

@@ -1,0 +1,88 @@
+name: Build and deploy telegram bot
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: telegram-bot-deploy
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Upload source to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          source: "."
+          target: /opt/my-love-telegram
+          rm: true
+          strip_components: 0
+          exclude: |
+            .git/
+            node_modules/
+            dist/
+            .npm-cache/
+            .env
+            .env.*
+            .github/workflows/deploy.yml
+      - name: Deploy bot on server
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          password: ${{ secrets.DEPLOY_PASSWORD }}
+          port: ${{ secrets.DEPLOY_PORT }}
+          script_stop: true
+          script: |
+            set -eu
+
+            APP_DIR=/opt/my-love-telegram
+            cat > "$APP_DIR/.env" <<EOF
+            NODE_ENV=production
+            LOG_LEVEL=info
+            TELEGRAM_BOT_TOKEN=${{ secrets.TELEGRAM_BOT_TOKEN }}
+            TELEGRAM_MODE=polling
+            FRONTEND_APP_URL=${{ secrets.FRONTEND_APP_URL }}
+            BACKEND_BASE_URL=https://api.147.45.124.221.sslip.io
+            TELEGRAM_INTEGRATION_SECRET=${{ secrets.TELEGRAM_INTEGRATION_SECRET }}
+            EOF
+
+            cd "$APP_DIR"
+            docker build --pull -t my-love-telegram:latest .
+            docker rm -f my-love-telegram 2>/dev/null || true
+            docker run -d --name my-love-telegram --restart unless-stopped \
+              --env-file "$APP_DIR/.env" \
+              my-love-telegram:latest
+            sleep 5
+            docker inspect -f '{{.State.Running}}' my-love-telegram | grep -qx true
+            docker logs --tail=30 my-love-telegram
