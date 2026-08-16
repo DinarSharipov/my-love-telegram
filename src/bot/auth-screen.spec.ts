@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildAuthScreen } from "./auth-screen.js";
+import { buildAuthScreen, buildLinkedScreen } from "./auth-screen.js";
 
 describe("buildAuthScreen", () => {
   it("links to the Telegram connection settings without exposing credentials", () => {
@@ -20,5 +20,11 @@ describe("buildAuthScreen", () => {
       text: "🔐 Авторизоваться",
       callback_data: "auth:start",
     });
+  });
+
+  it("does not put an insecure frontend URL in the linked screen", () => {
+    const screen = buildLinkedScreen("http://185.227.144.160");
+
+    expect(screen.keyboard).toBeUndefined();
   });
 });

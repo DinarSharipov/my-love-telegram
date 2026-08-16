@@ -63,7 +63,10 @@ export function createBot(config: AppConfig, logger: Logger): Bot {
       }
     }
 
-    await ctx.reply(screen.text, { reply_markup: screen.keyboard });
+    await ctx.reply(
+      screen.text,
+      screen.keyboard ? { reply_markup: screen.keyboard } : {},
+    );
   });
 
   bot.command("help", async (ctx) => {
@@ -108,9 +111,10 @@ export function createBot(config: AppConfig, logger: Logger): Bot {
 
   bot.command("settings", async (ctx) => {
     const screen = buildLinkedScreen(config.FRONTEND_APP_URL);
-    await ctx.reply("Настройки Telegram находятся в профиле My Love.", {
-      reply_markup: screen.keyboard,
-    });
+    await ctx.reply(
+      "Настройки Telegram находятся в профиле My Love.",
+      screen.keyboard ? { reply_markup: screen.keyboard } : {},
+    );
   });
 
   bot.callbackQuery("auth:help", async (ctx) => {
@@ -130,7 +134,10 @@ export function createBot(config: AppConfig, logger: Logger): Bot {
   bot.callbackQuery("auth:back", async (ctx) => {
     await ctx.answerCallbackQuery();
     const screen = buildAuthScreen(config.FRONTEND_APP_URL);
-    await ctx.editMessageText(screen.text, { reply_markup: screen.keyboard });
+    await ctx.editMessageText(
+      screen.text,
+      screen.keyboard ? { reply_markup: screen.keyboard } : {},
+    );
   });
 
   bot.catch((error) => {

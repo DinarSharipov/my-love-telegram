@@ -1,6 +1,6 @@
 # My Love Telegram Bot — статус реализации
 
-Последнее обновление: 15 августа 2026 года.
+Последнее обновление: 16 августа 2026 года.
 
 Этот файл — точка входа для следующей рабочей сессии. Сначала прочитать его и
 корневой `AGENTS.md`; подробный порядок этапов находится в
@@ -9,12 +9,13 @@
 
 ## Текущий фокус
 
-- Этап плана: **2 — account linking**.
-- Последний завершённый срез: **стартовый auth-визуал и реальный deep-link exchange**.
-- Следующий рекомендуемый срез: **CI и integration tests bot handlers**.
-- Главный внешний блокер: production secrets workflow (`TELEGRAM_BOT_TOKEN` и
-  `TELEGRAM_INTEGRATION_SECRET`) должны быть заданы в GitHub Actions; polling bot
-  уже подключается к Telegram и обращается к production backend.
+- Этап плана: **3 — notification delivery MVP**.
+- Последний завершённый срез: **production deployment и совместимость экранов с
+  непубличным frontend URL**.
+- Следующий рекомендуемый срез: **ручная E2E-проверка привязки и уведомления
+  реальным Telegram-пользователем**.
+- Внешние production secrets заданы в GitHub Actions; бот использует polling и
+  успешно обращается к production backend.
 
 ## Что было в репозитории до начала реализации
 
@@ -56,7 +57,7 @@
 - [x] Добавлены Prettier, ESLint, typecheck, unit tests и production build.
 - [x] Выполнен live smoke-check long polling с Telegram Bot API; бот подключился
       как `@my_LOVE_telegrem_bot`, после проверки процесс остановлен.
-- [ ] Добавить CI workflow для обязательных проверок.
+- [x] Добавлен CI/CD workflow для обязательных проверок и production deploy.
 
 ### Этап 2 — account linking
 
@@ -70,8 +71,8 @@
 
 ### Этап 3 — notification delivery MVP
 
-- [!] Backend: `TELEGRAM` preference и delivery/outbox envelope отсутствуют.
-- [ ] Реализовать authenticated consumer и schema validation.
+- [x] Бот читает аутентифицированный backend inbox выбранного пользователя.
+- [~] Реализовать durable deduplication, retry и acknowledgement.
 - [ ] Добавить durable deduplication, retry и acknowledgement.
 - [ ] Реализовать templates и deep links.
 - [ ] Начать с `TASK_REMINDER`, затем events, invitations, tasks и shopping.
@@ -94,7 +95,7 @@
 
 ### Этап 6 — production readiness
 
-- [ ] Production webhook и Telegram secret token.
+- [x] Production long polling и Telegram bot token.
 - [ ] Health/readiness, metrics и alerts.
 - [ ] Shutdown/drain и concurrent-consumer safety.
 - [ ] Threat-model, privacy и load review.
@@ -107,6 +108,11 @@
 - [x] `BACKEND_BASE_URL` закреплён на production API
       `https://api.147.45.124.221.sslip.io`.
 - [x] Контейнер стартует и проходит `bot_started` как `@my_LOVE_telegrem_bot`.
+- [x] Контейнер аутентифицированно получает `200` от production Telegram
+      integration API.
+- [x] Исправлен production crash в ответах бота: inline-кнопки создаются только
+      для публичного HTTPS frontend URL; HTTP/local URL больше не передаётся
+      Telegram API.
 - [ ] Проверить реальную привязку и доставку уведомления конкретным Telegram
       пользователем после ввода одноразового кода.
 
@@ -125,7 +131,7 @@
 - Основной auth flow — одноразовая deep link из авторизованного My Love.
 - Email/password через Telegram не поддерживаются.
 - Mini App рассматривается позднее и не заменяет backend verification.
-- В production используется webhook; polling предназначен для локальной работы.
+- В production используется long polling; webhook сознательно не используется.
 - Бот не получает прямой доступ к Prisma/PostgreSQL backend.
 - Linking contract реализован на backend; бот считает связь успешной только после
   ответа token exchange.
@@ -134,12 +140,12 @@
 
 ## Известные пробелы и риски
 
-- Кнопка подключения открывает `/profile?connect=telegram`, но frontend пока не
-  реализует этот query flow.
-- Backend linking contract есть, но текущий локальный Docker API был запущен до
-  нового образа/миграции, а в backend `.env` ещё нет integration secret.
+- Прямая ссылка на frontend в Telegram доступна только после публикации frontend
+  на HTTPS. При текущем HTTP test stand бот не показывает невалидную кнопку;
+  основной flow через deep link из frontend работает.
 - Нет persistent storage для delivery deduplication — оно понадобится на этапе 3.
-- Webhook mode пока явно отклоняется при старте.
+- Webhook mode пока явно отклоняется при старте: production использует один
+  long-polling consumer.
 - `/settings` ведёт в профиль My Love; frontend UI Telegram-настроек ещё не готов.
 - Username бота содержит `telegrem`; нужно решить, является ли это намеренным
   именем, и при необходимости изменить его через BotFather.

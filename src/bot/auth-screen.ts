@@ -2,7 +2,14 @@ import { InlineKeyboard } from "grammy";
 
 export interface AuthScreen {
   text: string;
-  keyboard: InlineKeyboard;
+  keyboard?: InlineKeyboard;
+}
+
+function canOpenInTelegram(url: URL): boolean {
+  return (
+    url.protocol === "https:" &&
+    !["localhost", "127.0.0.1"].includes(url.hostname)
+  );
 }
 
 export function buildAuthScreen(frontendAppUrl: string): AuthScreen {
@@ -10,10 +17,7 @@ export function buildAuthScreen(frontendAppUrl: string): AuthScreen {
   authUrl.searchParams.set("connect", "telegram");
   const keyboard = new InlineKeyboard();
 
-  if (
-    authUrl.protocol === "https:" &&
-    !["localhost", "127.0.0.1"].includes(authUrl.hostname)
-  ) {
+  if (canOpenInTelegram(authUrl)) {
     keyboard.url("🔐 Авторизоваться", authUrl.toString());
   } else {
     keyboard.text("🔐 Авторизоваться", "auth:start");
@@ -57,9 +61,13 @@ export function buildLinkedScreen(frontendAppUrl: string): AuthScreen {
       "",
       "Telegram подключён к My Love. Вы будете получать выбранные уведомления в этом чате.",
     ].join("\n"),
-    keyboard: new InlineKeyboard().url(
-      "Настройки уведомлений",
-      settingsUrl.toString(),
-    ),
+    ...(canOpenInTelegram(settingsUrl)
+      ? {
+          keyboard: new InlineKeyboard().url(
+            "Настройки уведомлений",
+            settingsUrl.toString(),
+          ),
+        }
+      : {}),
   };
 }
